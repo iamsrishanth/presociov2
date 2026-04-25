@@ -1,5 +1,3 @@
-import type { J2VMovie } from '@/types';
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-3-flash-preview';
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
@@ -58,52 +56,22 @@ async function generateText(systemPrompt: string, userPrompt: string): Promise<s
 }
 
 /**
- * Generate a JSON2VIDEO Movie JSON from a prompt.
- * Parses the response as JSON and validates basic structure.
+ * Generate a cinematic video prompt for Wan 2.6 text-to-video.
+ * Returns raw text — no JSON parsing needed.
  */
-export async function generateMovieJSON(
+export async function generateVideoPrompt(
   systemPrompt: string,
   userPrompt: string
-): Promise<J2VMovie> {
+): Promise<string> {
   const raw = await generateText(systemPrompt, userPrompt);
 
-  // Strip markdown code fences if the LLM added them despite instructions
+  // Strip markdown code fences if the LLM added them
   const cleaned = raw
-    .replace(/^```(?:json)?\s*\n?/i, '')
+    .replace(/^```(?:text|markdown)?\s*\n?/i, '')
     .replace(/\n?```\s*$/i, '')
     .trim();
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    throw new Error(
-      `Gemini returned invalid JSON for Movie JSON. Raw response (first 500 chars): ${cleaned.slice(0, 500)}`
-    );
-  }
-
-  // Basic validation
-  const movie = parsed as J2VMovie;
-  if (!movie.scenes || !Array.isArray(movie.scenes) || movie.scenes.length === 0) {
-    throw new Error('Generated Movie JSON has no scenes');
-  }
-
-  // Enforce resolution
-  movie.resolution = 'instagram-story';
-  movie.quality = 'high';
-
-  // Validate scene durations sum
-  const totalDuration = movie.scenes.reduce(
-    (sum, scene) => sum + (scene.duration ?? 5),
-    0
-  );
-  if (totalDuration > 90) {
-    throw new Error(
-      `Generated video duration ${totalDuration}s exceeds Instagram Reel max of 90s`
-    );
-  }
-
-  return movie;
+  return cleaned;
 }
 
 /**

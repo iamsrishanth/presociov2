@@ -159,7 +159,7 @@ export default function Home() {
               label: mode === 'full' ? 'Gemini → Movie JSON' : 'Hardcoded Movie JSON',
               status: mode === 'full' ? 'ai' : 'stub',
             },
-            { n: 2, label: 'JSON2VIDEO Render', status: 'active' },
+            { n: 2, label: 'Wan 2.6 Generation', status: 'active' },
             {
               n: 3,
               label: mode === 'full' ? 'Gemini → Caption' : 'Test Caption',
@@ -429,7 +429,7 @@ export default function Home() {
       )}
 
       <p style={{ textAlign: 'center', color: '#444', fontSize: 12, marginTop: 48 }}>
-        Presocio MVP — JSON2VIDEO + Gemini + Zernio pipeline
+        Presocio MVP — Wan 2.6 + Gemini + Zernio pipeline
       </p>
     </main>
   );

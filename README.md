@@ -1,6 +1,6 @@
 # Presocio — Instagram Reel Auto-Publisher
 
-AI-powered pipeline that takes a brand brief, generates a vertical Instagram Reel via JSON2VIDEO, writes a caption via Gemini, and publishes it to Instagram via Zernio — all without manual editing.
+AI-powered pipeline that takes a brand brief, generates a vertical Instagram Reel via **Wan 2.6 text-to-video** (AIML API), writes a caption via Gemini, and publishes it to Instagram via Zernio — all without manual editing.
 
 ## Pipeline
 
@@ -9,14 +9,14 @@ User Input (Campaign Brief)
         │
         ▼
 ┌─────────────────────────┐
-│  Stage 1: Gemini Flash  │  → Movie JSON (video scenes)
+│  Stage 1: Gemini Flash  │  → Cinematic video prompt (text)
 │  + Caption Prompt       │  → Instagram caption + hashtags
 └─────────────────────────┘
         │
         ▼
 ┌─────────────────────────┐
-│  Stage 2: JSON2VIDEO    │  → Render 1080×1920 MP4
-│  POST /v2/movies        │  → Poll until status = "done"
+│  Stage 2: Wan 2.6 T2V   │  → Generate 1080×1920 MP4 via AIML API
+│  (AIML API)             │  → Poll until status = "done"
 └─────────────────────────┘
         │
         ▼
@@ -42,7 +42,7 @@ npm install
 Copy `.env.example` to `.env` and fill in your API keys:
 
 ```env
-JSON2VIDEO_API_KEY=your_key_here
+AIML_API_KEY=your_key_here
 GEMINI_API_KEY=your_key_here
 GEMINI_MODEL=gemini-3-flash-preview
 ZERNIO_API_KEY=sk_your_key_here
@@ -68,8 +68,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Mode | Description | LLM Cost |
 |------|-------------|----------|
-| **Test** | Hardcoded 3-scene Reel + test caption | Free |
-| **Full** | AI-generated Movie JSON + caption from campaign brief | Gemini API calls |
+| **Test** | Hardcoded video prompt + test caption | Free |
+| **Full** | AI-generated prompt from campaign brief + caption | Gemini API calls |
 
 ## API Endpoints
 
@@ -111,8 +111,8 @@ Open [http://localhost:3000](http://localhost:3000).
 |-------|------------|
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
-| Video Rendering | JSON2Video API |
-| Caption Generation | Google Gemini 3 Flash |
+| Video Generation | Wan 2.6 T2V (AIML API) |
+| Prompt Generation | Google Gemini 3 Flash |
 | Social Publishing | Zernio API |
 | UI | React (inline styles, dark theme) |
 
@@ -122,11 +122,11 @@ Open [http://localhost:3000](http://localhost:3000).
 src/
 ├── types/index.ts            # TypeScript types
 ├── lib/
-│   ├── json2video.ts         # JSON2VIDEO client (submit + poll)
+│   ├── wan26.ts              # Wan 2.6 client (submit + poll)
 │   ├── zernio.ts             # Zernio client (post + list accounts)
-│   ├── gemini.ts             # Gemini client (Movie JSON + caption)
+│   ├── gemini.ts             # Gemini client (video prompt + caption)
 │   ├── prompts.ts            # System + user prompt templates
-│   └── test-data.ts          # Hardcoded test Reel JSON
+│   └── test-data.ts          # Hardcoded test video prompt
 └── app/
     ├── layout.tsx            # Root layout
     ├── page.tsx              # UI with mode toggle + campaign brief form
@@ -138,8 +138,8 @@ src/
 ## Instagram Reel Compliance
 
 - Resolution: 1080×1920 px (9:16)
-- Duration: ≤ 90 seconds
-- Format: MP4 (H.264)
+- Duration: 5, 10, or 15 seconds (Wan 2.6 constraint)
+- Format: MP4
 - Caption: ≤ 2,200 characters
 - Account type: Business or Creator (required)
 

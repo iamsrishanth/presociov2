@@ -1,55 +1,25 @@
-import type { UserInput, J2VMovie } from '@/types';
+import type { UserInput } from '@/types';
 
-// ─── JSON2VIDEO Movie JSON Prompt ────────────────────────────────────────────
+// ─── Wan 2.6 Video Prompt ────────────────────────────────────────────────────
 
-export const MOVIE_JSON_SYSTEM_PROMPT = `You are an expert video scriptwriter and JSON2Video API specialist.
-Your job is to produce a valid JSON2Video API payload (Movie JSON) that renders a 
-vertical Instagram Reel (1080×1920 px, 9:16 aspect ratio).
+export const VIDEO_PROMPT_SYSTEM_PROMPT = `You are an expert AI video prompt engineer specializing in text-to-video generation for Wan 2.6.
+Your job is to craft a vivid, cinematic text prompt that the Wan 2.6 model will use to generate a vertical Instagram Reel (9:16 aspect ratio).
 
 Rules:
-- Resolution MUST be "instagram-story" (maps to 1080×1920).
-- Quality MUST be "high".
-- Total video duration MUST NOT exceed the specified duration.
-- Split content into 3–5 scenes. Each scene should be 3–10 seconds.
-- Every scene MUST have a background-color (hex) or an image element with a src URL.
-- Overlay bold text elements on each scene that communicate the key message.
-- Use the "text" element type for captions/headlines. Keep text concise — max 8 words per text block.
-- Include a closing CTA scene (last scene) with the call-to-action text and brand name.
-- Do NOT include audio in the JSON.
-- Use "fade-in" on text elements (0.3–0.8 seconds).
-- Text positioning: use x, y (pixels) for custom placement. Canvas is 1080 wide, 1920 tall.
-- Use "Montserrat" or "Roboto" for font-family.
-- Use "center-center" or "custom" for position.
+- The prompt must be a SINGLE, cohesive narrative description (not JSON, not structured data).
+- Describe the visual scene(s) in vivid detail: camera movement, lighting, subject action, transitions.
+- Specify the vertical 9:16 framing explicitly (e.g., "vertical video", "shot in portrait orientation").
+- Include 2-4 distinct visual beats or "shots" that flow together as a multi-shot narrative.
+- Describe the mood, color palette, and visual style matching the brand brief.
+- Include dynamic camera movements (pan, zoom, tracking, push-in, pull-back).
+- Specify lighting conditions (golden hour, dramatic shadows, neon glow, soft diffused).
+- Keep the prompt between 100-300 words — detailed but focused.
+- Do NOT include text overlays, captions, or on-screen text (Wan 2.6 generates pure video).
+- Do NOT describe audio or music (audio is generated separately by the model).
+- Output ONLY the prompt text. No markdown. No explanation. No labels.`;
 
-JSON2Video element types you can use:
-  - "image": background images (use src: URL, or model+prompt for AI-generated)
-  - "text": overlay text (use text, font-family, font-size, color, x, y, width, etc.)
-
-Text element properties:
-  - type: "text"
-  - text: string
-  - font-family: "Montserrat" | "Roboto" | "Oswald" | "Playfair Display"
-  - font-size: integer (px) — use 40-72 for headlines, 24-36 for subtext
-  - color: hex string (e.g. "#ffffff")
-  - background-color: hex string (optional)
-  - font-weight: "bold" | "normal"
-  - text-align: "center" | "left" | "right"
-  - width: integer (px) — text block width
-  - x: integer (px) — horizontal position
-  - y: integer (px) — vertical position (0 = top, ~800-1000 = center area for 1920px height)
-  - fade-in: number (seconds)
-  - start: number (seconds, delay before element appears)
-
-Scene properties:
-  - comment: string (description)
-  - duration: integer seconds (3-10 per scene)
-  - background-color: hex string
-  - elements: array of element objects
-
-Output ONLY the raw JSON object. No markdown. No explanation. No code fences.`;
-
-export function buildMovieJSONPrompt(input: UserInput): string {
-  return `Generate a JSON2Video Movie JSON for an Instagram Reel with the following brief:
+export function buildVideoPromptPrompt(input: UserInput): string {
+  return `Generate a Wan 2.6 text-to-video prompt for an Instagram Reel with the following brief:
 
 Brand: ${input.brand_name}
 Campaign Objective: ${input.campaign_objective}
@@ -58,19 +28,21 @@ Tone: ${input.content_tone}
 Key Messages: ${input.key_messages.join(', ')}
 Reel Topic: ${input.reel_topic}
 Visual Style: ${input.visual_style}
-Duration: ${input.reel_duration_seconds} seconds
+Duration: ${input.reel_duration_seconds} seconds (Wan 2.6 will generate up to 15s)
 Call to Action: ${input.cta}
 
 Requirements:
-- 3–5 scenes, each visually distinct (different background colors)
-- Bold, readable text overlays on every scene
-- Scene 1: Hook — attention-grabbing statement about "${input.reel_topic}"
-- Scene 2–N: Key message delivery, one per scene
-- Final Scene: CTA with brand name "${input.brand_name}" and "${input.cta}"
-- Total duration must sum to exactly ${input.reel_duration_seconds} seconds
-- Use dark, modern color palette matching "${input.visual_style}" style
+- Vertical 9:16 portrait orientation
+- Multi-shot cinematic narrative (2-4 distinct visual beats)
+- Visual style matching "${input.visual_style}"
+- Color palette and mood appropriate for "${input.content_tone}" tone
+- Dynamic camera work (specify movements: push-in, pan, tracking, etc.)
+- Each visual beat should be 3-5 seconds of screen time
+- Opening shot must be a strong visual hook related to "${input.reel_topic}"
+- Closing shot should visually suggest the CTA: "${input.cta}"
+- Total narrative should feel complete within ~15 seconds
 
-Return ONLY the raw JSON object.`;
+Return ONLY the descriptive prompt text.`;
 }
 
 // ─── Instagram Caption Prompt ────────────────────────────────────────────────

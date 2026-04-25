@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { submitMovie, pollUntilDone } from '@/lib/json2video';
+import { generateVideo, pollUntilDone } from '@/lib/wan26';
 import { postReel } from '@/lib/zernio';
-import { generateMovieJSON, generateCaption } from '@/lib/gemini';
+import { generateVideoPrompt, generateCaption } from '@/lib/gemini';
 import {
-  MOVIE_JSON_SYSTEM_PROMPT,
-  buildMovieJSONPrompt,
+  VIDEO_PROMPT_SYSTEM_PROMPT,
+  buildVideoPromptPrompt,
   CAPTION_SYSTEM_PROMPT,
   buildCaptionPrompt,
 } from '@/lib/prompts';
-import { getTestMovieJSON, getTestCaption } from '@/lib/test-data';
+import { getTestVideoPrompt, getTestCaption } from '@/lib/test-data';
 import type { PipelineResult, UserInput } from '@/types';
 
 export const maxDuration = 300; // 5 min serverless timeout (render can take a while)
@@ -17,12 +17,12 @@ export const maxDuration = 300; // 5 min serverless timeout (render can take a w
  * POST /api/pipeline
  *
  * Modes:
- *   - "test": Hardcoded Reel JSON + test caption (no LLM, no cost)
- *   - "full": LLM-generated Movie JSON + caption from user brief
+ *   - "test": Hardcoded video prompt + test caption (no LLM, no cost)
+ *   - "full": LLM-generated video prompt + caption from user brief
  *
  * Stages:
- *   1. Generate Movie JSON (Gemini) — or use test data
- *   2. Render via JSON2VIDEO
+ *   1. Generate video prompt (Gemini) — or use test data
+ *   2. Generate video via Wan 2.6 (AIML API)
  *   3. Generate caption (Gemini) — or use test data
  *   4. Post to Instagram via Zernio
  *   5. Return result
@@ -33,10 +33,10 @@ export async function POST(req: NextRequest): Promise<NextResponse<PipelineResul
     const mode: 'test' | 'full' = body.mode ?? 'test';
     const userInput: UserInput | undefined = body.input;
 
-    let movieJSON;
-    let caption;
+    let videoPrompt: string;
+    let caption: string;
 
-    // ── STAGE 1: Generate or use test data ────────────────────────────
+    // ── STAGE 1: Generate video prompt or use test data ─────────────
     if (mode === 'full') {
       if (!userInput) {
         return NextResponse.json(
@@ -59,10 +59,10 @@ export async function POST(req: NextRequest): Promise<NextResponse<PipelineResul
         );
       }
 
-      console.log('[Pipeline] Stage 1: Generating Movie JSON via Gemini...');
-      const moviePrompt = buildMovieJSONPrompt(userInput);
-      movieJSON = await generateMovieJSON(MOVIE_JSON_SYSTEM_PROMPT, moviePrompt);
-      console.log(`[Pipeline] Movie JSON generated (${movieJSON.scenes.length} scenes)`);
+      console.log('[Pipeline] Stage 1: Generating video prompt via Gemini...');
+      const promptInput = buildVideoPromptPrompt(userInput);
+      videoPrompt = await generateVideoPrompt(VIDEO_PROMPT_SYSTEM_PROMPT, promptInput);
+      console.log(`[Pipeline] Video prompt generated (${videoPrompt.length} chars)`);
 
       console.log('[Pipeline] Stage 3: Generating caption via Gemini...');
       const captionPrompt = buildCaptionPrompt(userInput);
@@ -70,20 +70,32 @@ export async function POST(req: NextRequest): Promise<NextResponse<PipelineResul
       console.log(`[Pipeline] Caption generated (${caption.length} chars)`);
     } else {
       console.log('[Pipeline] Test mode — using hardcoded data');
-      movieJSON = getTestMovieJSON();
+      videoPrompt = getTestVideoPrompt();
       caption = getTestCaption();
     }
 
-    // ── STAGE 2: Render video via JSON2VIDEO ──────────────────────────
-    console.log('[Pipeline] Stage 2: Submitting to JSON2VIDEO...');
-    const projectId = await submitMovie(movieJSON);
-    console.log(`[Pipeline] Project ID: ${projectId}`);
+    // ── STAGE 2: Generate video via Wan 2.6 ─────────────────────────
+    console.log('[Pipeline] Stage 2: Submitting to Wan 2.6 (AIML API)...');
+    const durationMap: Record<number, 5 | 10 | 15> = {
+      15: 15,
+      30: 15, // Wan 2.6 max is 15s per clip
+      60: 15,
+    };
+    const wanDuration = durationMap[userInput?.reel_duration_seconds ?? 15] ?? 10;
 
-    console.log('[Pipeline] Polling until render completes...');
-    const video = await pollUntilDone(projectId);
-    console.log(
-      `[Pipeline] Video ready: ${video.url} (${video.width}x${video.height}, ${video.duration}s)`
-    );
+    const generationId = await generateVideo({
+      prompt: videoPrompt,
+      aspect_ratio: '9:16',
+      resolution: '1080p',
+      duration: wanDuration,
+      shot_type: 'multi',
+      generate_audio: true,
+    });
+    console.log(`[Pipeline] Generation ID: ${generationId}`);
+
+    console.log('[Pipeline] Polling until generation completes...');
+    const video = await pollUntilDone(generationId);
+    console.log(`[Pipeline] Video ready: ${video.url}`);
 
     // ── STAGE 4: Post to Instagram via Zernio ─────────────────────────
     console.log('[Pipeline] Stage 4: Posting to Instagram via Zernio...');
@@ -101,6 +113,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<PipelineResul
       video_url: video.url,
       caption_preview: caption.slice(0, 125) + '...',
       caption,
+      generation_id: generationId,
+      credits_used: video.creditsUsed,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -118,7 +132,7 @@ export async function GET() {
     status: 'ok',
     service: 'presocio-reel-publisher',
     stages: {
-      json2video: !!process.env.JSON2VIDEO_API_KEY,
+      wan26: !!process.env.AIML_API_KEY,
       gemini: !!process.env.GEMINI_API_KEY,
       gemini_model: process.env.GEMINI_MODEL ?? 'gemini-3-flash-preview',
       zernio: !!process.env.ZERNIO_API_KEY,

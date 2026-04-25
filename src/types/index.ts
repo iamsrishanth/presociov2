@@ -13,7 +13,48 @@ export interface UserInput {
   cta: string;
 }
 
-// ─── JSON2VIDEO Types ────────────────────────────────────────────────────────
+// ─── Wan 2.6 (Text-to-Video) Types ───────────────────────────────────────────
+
+export interface Wan26GenerationParams {
+  prompt: string;
+  aspect_ratio?: '16:9' | '9:16' | '1:1' | '4:3' | '3:4';
+  resolution?: '720p' | '1080p';
+  duration?: 5 | 10 | 15;
+  shot_type?: 'single' | 'multi';
+  generate_audio?: boolean;
+  negative_prompt?: string;
+  seed?: number;
+  audio_url?: string;
+}
+
+export interface Wan26SubmitResponse {
+  id: string;
+  status: 'queued' | 'generating' | 'completed' | 'error';
+  meta?: {
+    usage?: {
+      credits_used: number;
+    };
+  };
+}
+
+export interface Wan26StatusResponse {
+  id: string;
+  status: 'queued' | 'generating' | 'completed' | 'error';
+  video?: {
+    url: string;
+  } | null;
+  error?: {
+    name: string;
+    message: string;
+  } | null;
+  meta?: {
+    usage?: {
+      credits_used: number;
+    };
+  } | null;
+}
+
+// ─── JSON2VIDEO Types (legacy — kept for reference) ──────────────────────────
 
 export interface J2VTextElement {
   type: 'text';
@@ -142,4 +183,6 @@ export interface PipelineResult {
   caption?: string;
   error?: string;
   stage?: string;
+  generation_id?: string;
+  credits_used?: number;
 }
